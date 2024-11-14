@@ -3,6 +3,7 @@ extends Node
 var fish_log: Array = [] setget _set_nullifier
 
 var _last_inventory_size: int = 0 setget _set_nullifier
+var _fish_log_refs: Array = [] setget _set_nullifier
 
 
 func _ready() -> void:
@@ -36,26 +37,23 @@ func _on_inventory_update() -> void:
 	
 	_last_inventory_size = inventory_size
 	
+	
 	for i in new_entries:
 		var entry_index: int = inventory_size - new_entries + i
 		var entry: Dictionary = PlayerData.inventory[entry_index]
 		var is_fish: bool = entry.id.begins_with("fish_")
-	
-		if (
-				fish_log_size > 0
-				and fish_log[fish_log_size - 1].ref == entry.ref
-		):
+		
+		if not is_fish or entry.ref in _fish_log_refs:
 			continue
-	
-		if is_fish:
-			fish_log.append(entry)
+		
+		fish_log.append(entry)
+		_fish_log_refs.append(entry.ref)
 
 
 func _save_fish_logs() -> void:
 	var save_slot: int = UserSave.current_loaded_slot
 	var save: Dictionary = {
-		"fish_log": fish_log,
-		"inventory_size": _last_inventory_size
+		"fish_log": fish_log
 	}
 	
 	var dir := Directory.new()
@@ -75,9 +73,14 @@ func _load_fish_logs(save_slot: int) -> void:
 	file.close()
 	
 	var stored_json := JSON.parse(content)
-	if stored_json.error == OK:
-		fish_log = stored_json.result.fish_log
-		_last_inventory_size = stored_json.result.inventory_size
+	if stored_json.error != OK:
+		push_warning("Could not parse JSON from fish logs file")
+		return
+	fish_log = stored_json.result.fish_log
+	
+	_fish_log_refs = []
+	for entry in fish_log:
+		_fish_log_refs.append(entry.ref)
 	
 	_last_inventory_size = PlayerData.inventory.size()
 
