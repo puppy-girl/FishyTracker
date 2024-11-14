@@ -1,0 +1,16 @@
+
+id = "FishyTracker"
+name = "Fishy Tracker"
+description = "Track fishes! :3"
+version = "1.0.0"
+homepage = "https://github.com/x8c8r/FishyTracker"
+author = "x8c8r and Jade"
+
+icon = "icon.png"
+readme = "README.md"
+
+[project]
+godot = "./project/project.godot"
+
+[[dependencies]]
+thunderstore_version = "NotNet-GDWeave-2.0.14"
