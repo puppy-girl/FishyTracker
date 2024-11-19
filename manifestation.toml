@@ -1,10 +1,10 @@
 
 id = "FishyTracker"
 name = "Fishy Tracker"
-description = "Track fishes! :3"
+description = "Track caught sizes and qualities for every fish!"
 version = "1.0.0"
-homepage = "https://github.com/x8c8r/FishyTracker"
-author = "x8c8r and Jade"
+homepage = "https://github.com/puppy-girl/FishyTracker"
+author = "Jade"
 
 icon = "icon.png"
 readme = "README.md"
