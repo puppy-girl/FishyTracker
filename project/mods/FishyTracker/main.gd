@@ -114,7 +114,7 @@ func _update_tooltip(tooltip: Node) -> void:
 			"[color=%s]%s[/color]"
 			% [quality_data.color, quality_data.title.substr(0, 2)]
 		)
-		cells.append("[cell]%s     [/cell]" % header)
+		cells.append("[cell]%s    [/cell]" % header)
 
 	for size in Size.values():
 		cells.append("[cell][color=#b48141]%s[/color][/cell]" % SIZE_PREFIX[size])
