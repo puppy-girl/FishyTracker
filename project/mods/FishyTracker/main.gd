@@ -25,7 +25,7 @@ const SIZE_PREFIX := {
 	Size.HUGE: "Huge",
 	Size.MASSIVE: "Massive",
 	Size.GIGANTIC: "Gigantic",
-	Size.COLOSSAL: "Collosal",
+	Size.COLOSSAL: "Colossal",
 }
 
 var catch_journal: Dictionary = {} setget _set_nullifier
@@ -112,9 +112,9 @@ func _update_tooltip(tooltip: Node) -> void:
 		var quality_data: Dictionary = PlayerData.QUALITY_DATA[quality]
 		var header := (
 			"[color=%s]%s[/color]"
-			% [quality_data.color, quality_data.title.substr(0, 2).to_upper()]
+			% [quality_data.color, quality_data.title.substr(0, 2)]
 		)
-		cells.append("[cell]%s    [/cell]" % header)
+		cells.append("[cell]%s     [/cell]" % header)
 
 	for size in Size.values():
 		cells.append("[cell][color=#b48141]%s[/color][/cell]" % SIZE_PREFIX[size])
@@ -125,7 +125,7 @@ func _update_tooltip(tooltip: Node) -> void:
 				(
 					"[cell]%s[/cell]"
 					% (
-						"[img=26]res://Assets/Textures/UI/stars.png[/img]"
+						"[img=24]res://Assets/Textures/UI/stars.png[/img]"
 						if qualities & 1 << quality
 						else ""
 					)
