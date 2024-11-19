@@ -15,18 +15,17 @@ const SIZE_THRESHOLD := {
 	Size.GIGANTIC: 2.75,
 	Size.COLOSSAL: 3.25,
 }
-
 const SIZE_PREFIX := {
-	Size.BUGGED: "??? ",
-	Size.MICROSCOPIC: "Microscopic ",
-	Size.TINY: "Tiny ",
-	Size.SMALL: "Small ",
-	Size.NORMAL: "",
-	Size.LARGE: "Large ",
-	Size.HUGE: "Huge ",
-	Size.MASSIVE: "Massive ",
-	Size.GIGANTIC: "Gigantic ",
-	Size.COLOSSAL: "Collosal ",
+	Size.BUGGED: "???",
+	Size.MICROSCOPIC: "Micro",
+	Size.TINY: "Tiny",
+	Size.SMALL: "Small",
+	Size.NORMAL: "Normal",
+	Size.LARGE: "Large",
+	Size.HUGE: "Huge",
+	Size.MASSIVE: "Massive",
+	Size.GIGANTIC: "Gigantic",
+	Size.COLOSSAL: "Collosal",
 }
 
 var catch_journal: Dictionary = {} setget _set_nullifier
@@ -41,7 +40,7 @@ func _ready() -> void:
 	PlayerData.connect("_inventory_refresh", self, "_on_inventory_update")
 	UserSave.connect("_slot_saved", self, "_save_fish_logs")
 
-	var save_slot = UserSave.current_loaded_slot
+	var save_slot := UserSave.current_loaded_slot
 	if save_slot != -1:  # loaded slot is -1 when there's no save file
 		_load_fish_logs(save_slot)
 
@@ -56,15 +55,18 @@ func get_size(fish_id: String, fish_size: float) -> int:
 			break
 		index += 1
 
-	return index - 1 # loop offsets the index by 1
+	return index - 1  # loop offsets the index by 1
 
 
 func _on_node_added(node: Node) -> void:
 	if (
-		node.name == "save_select"
-		or (node.name.begins_with("@save_select@") and node.get_parent().name != "main_menu")
+		(node.name == "save_select" or node.name.begins_with("@save_select@"))
+		and node.get_parent().name != "main_menu"
 	):
 		node.connect("_pressed", self, "_switch_save_slot", [], CONNECT_DEFERRED)
+
+	if node.name == "tooltip_node" and node.get_parent().name.find("Control") != -1:
+		node.connect("ready", self, "_update_tooltip", [node], CONNECT_DEFERRED)
 
 
 func _on_inventory_update() -> void:
@@ -86,17 +88,51 @@ func _on_inventory_update() -> void:
 		if not is_fish or entry.ref in _fish_log_refs:
 			continue
 
-		if not entry.id in catch_journal:
-			catch_journal[entry.id] = 0
+		var fish_name: String = Globals.item_data[entry.id]["file"].item_name
 
-		print(entry.quality)
-		print(entry.quality * Size.size())
-		print(get_size(entry.id, entry.size))
-
-		catch_journal[entry.id] |= 1 << entry.quality * Size.size() << get_size(entry.id, entry.size)
+		if not fish_name in catch_journal:
+			catch_journal[fish_name] = 0
+		catch_journal[fish_name] |= 1 << get_size(entry.id, entry.size) * 6 << entry.quality
 
 		fish_log.append(entry)
 		_fish_log_refs.append(entry.ref)
+
+
+func _update_tooltip(tooltip: Node) -> void:
+	if tooltip.header.find("UNKNOWN") != -1:
+		return
+
+	var fish_name: String = tooltip.header.substr(15, tooltip.header.length() - 23)
+	if not fish_name in catch_journal:
+		return
+
+	var cells := ["[cell][/cell]"]  # start with a blank cell
+
+	for quality in Quality.values():
+		var quality_data: Dictionary = PlayerData.QUALITY_DATA[quality]
+		var header := (
+			"[color=%s]%s[/color]"
+			% [quality_data.color, quality_data.title.substr(0, 2).to_upper()]
+		)
+		cells.append("[cell]  %s  [/cell]" % header)
+
+	for size in Size.values():
+		cells.append("[cell][color=#b48141]%s[/color][/cell]" % SIZE_PREFIX[size])
+
+		var qualities: int = catch_journal[fish_name] >> size * 6 & 0b111111
+		for quality in 6:
+			cells.append(
+				(
+					"[cell]%s[/cell]"
+					% (
+						"    [img=26]res://Assets/Textures/UI/stars.png[/img]"
+						if qualities & 1 << quality
+						else ""
+					)
+				)
+			)
+
+	tooltip.body += "\n\n[table=%s]%s[/table]" % [Quality.size() + 1, "".join(cells)]
 
 
 func _save_fish_logs() -> void:
