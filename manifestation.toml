@@ -2,7 +2,7 @@
 id = "FishyTracker"
 name = "Fishy Tracker"
 description = "Track caught sizes and qualities for every fish!"
-version = "1.0.0"
+version = "1.0.1"
 homepage = "https://github.com/puppy-girl/FishyTracker"
 author = "Jade"
 
