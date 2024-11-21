@@ -61,6 +61,11 @@ func _on_node_added(node: Node) -> void:
 		if save_slot != -1:  # loaded slot is -1 when there's no save file
 			_load_fish_logs(save_slot)
 
+		# Update the tooltip styling for tables
+		var tooltip_body = $"/root/Tooltip/Panel/body"
+		tooltip_body.set("custom_constants/table_hseparation", 0)
+		tooltip_body.set("custom_constants/table_vseparation", -7)
+
 	# When the save select buttons are created, connect to each button to switch the loaded save
 	if (
 		(node.name == "save_select" or node.name.begins_with("@save_select@"))
@@ -95,7 +100,7 @@ func _on_inventory_update() -> void:
 		var fish_name: String = Globals.item_data[entry.id]["file"].item_name
 
 		if not fish_name in catch_journal:
-			catch_journal[fish_name] = 0
+			catch_journal[fish_name] = int()
 		catch_journal[fish_name] |= 1 << get_size(entry.id, entry.size) * 6 << entry.quality
 
 		fish_log.append(entry)
@@ -115,25 +120,22 @@ func _update_tooltip(tooltip: Node) -> void:
 	var cells := ["[cell][/cell]"]  # start with a blank cell
 
 	for quality in Quality.values():
-		var quality_data: Dictionary = PlayerData.QUALITY_DATA[quality]
-		var header := "[color=%s]%s[/color]" % [quality_data.color, quality_data.title.substr(0, 2)]
-		cells.append("[cell]%s    [/cell]" % header)
+		cells.append(
+			"[cell][img]res://mods/FishyTracker/assets/qualities/%s.png[/img][/cell]" % quality
+		)
 
 	for size in Size.values():
-		cells.append("[cell][color=#b48141]%s[/color][/cell]" % SIZE_PREFIX[size])
+		cells.append("[cell][color=#b48141]%s [/color][/cell]" % SIZE_PREFIX[size])
 
 		var qualities: int = catch_journal[fish_name] >> size * 6 & 0b111111
 		for quality in 6:
-			cells.append(
-				(
-					"[cell]%s[/cell]"
-					% (
-						"[img=24]res://Assets/Textures/UI/stars.png[/img]"
-						if qualities & 1 << quality
-						else ""
-					)
-				)
+			var caught: bool = qualities & 1 << quality
+			var icon := (
+				"res://mods/FishyTracker/assets/star.png"
+				if caught
+				else "res://mods/FishyTracker/assets/no_star.png"
 			)
+			cells.append("[cell][img]%s[/img][/cell]" % icon)
 
 	tooltip.body += "\n\n[table=%s]%s[/table]" % [Quality.size() + 1, "".join(cells)]
 
@@ -175,6 +177,10 @@ func _load_fish_logs(save_slot: int) -> void:
 	_fish_log_refs = []
 	for entry in fish_log:
 		_fish_log_refs.append(entry.ref)
+
+	for fish in catch_journal:
+		if typeof(catch_journal[fish]) == TYPE_REAL:
+			catch_journal[fish] = int(catch_journal[fish])
 
 	_last_inventory_size = 0
 
