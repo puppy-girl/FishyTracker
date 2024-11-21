@@ -40,10 +40,6 @@ func _ready() -> void:
 	PlayerData.connect("_inventory_refresh", self, "_on_inventory_update")
 	UserSave.connect("_slot_saved", self, "_save_fish_logs")
 
-	var save_slot := UserSave.current_loaded_slot
-	if save_slot != -1:  # loaded slot is -1 when there's no save file
-		_load_fish_logs(save_slot)
-
 
 func get_size(fish_id: String, fish_size: float) -> int:
 	var index := 0
@@ -59,12 +55,20 @@ func get_size(fish_id: String, fish_size: float) -> int:
 
 
 func _on_node_added(node: Node) -> void:
+	# Load the save file when we reach the main menu
+	if node.name == "main_menu":
+		var save_slot := UserSave.current_loaded_slot
+		if save_slot != -1:  # loaded slot is -1 when there's no save file
+			_load_fish_logs(save_slot)
+
+	# When the save select buttons are created, connect to each button to switch the loaded save
 	if (
 		(node.name == "save_select" or node.name.begins_with("@save_select@"))
 		and node.get_parent().name != "main_menu"
 	):
 		node.connect("_pressed", self, "_switch_save_slot", [], CONNECT_DEFERRED)
 
+	# Whenever a tooltip is added to the journal menu, pass the node to _update_tooltip
 	if node.name == "tooltip_node" and node.get_parent().name.find("Control") != -1:
 		node.connect("ready", self, "_update_tooltip", [node], CONNECT_DEFERRED)
 
@@ -99,10 +103,12 @@ func _on_inventory_update() -> void:
 
 
 func _update_tooltip(tooltip: Node) -> void:
+	# Skip tooltips for fish that haven't been caught yet
 	if tooltip.header.find("UNKNOWN") != -1:
 		return
 
 	var fish_name: String = tooltip.header.substr(15, tooltip.header.length() - 23)
+	# Skip tooltips for fish that aren't in the catch journal
 	if not fish_name in catch_journal:
 		return
 
@@ -110,10 +116,7 @@ func _update_tooltip(tooltip: Node) -> void:
 
 	for quality in Quality.values():
 		var quality_data: Dictionary = PlayerData.QUALITY_DATA[quality]
-		var header := (
-			"[color=%s]%s[/color]"
-			% [quality_data.color, quality_data.title.substr(0, 2)]
-		)
+		var header := "[color=%s]%s[/color]" % [quality_data.color, quality_data.title.substr(0, 2)]
 		cells.append("[cell]%s    [/cell]" % header)
 
 	for size in Size.values():
@@ -137,36 +140,43 @@ func _update_tooltip(tooltip: Node) -> void:
 
 func _save_fish_logs() -> void:
 	var save_slot: int = UserSave.current_loaded_slot
-	var save: Dictionary = {"catch_journal": catch_journal, "fish_log": fish_log}
-
+	var save_data: Dictionary = {"catch_journal": catch_journal, "fish_log": fish_log}
+	var file := File.new()
 	var dir := Directory.new()
+
 	if !dir.dir_exists("user://FishyTracker"):
 		dir.make_dir("user://FishyTracker")
 
-	var file := File.new()
 	file.open("user://FishyTracker/fish_log_slot_%s.dat" % save_slot, File.WRITE)
-	file.store_string(JSON.print(save))
+	file.store_string(JSON.print(save_data))
 	file.close()
 
 
 func _load_fish_logs(save_slot: int) -> void:
 	var file := File.new()
-	file.open("user://FishyTracker/fish_log_slot_%s.dat" % save_slot, File.READ)
-	var content := file.get_as_text() if file.is_open() else '{"catch_journal":{},"fish_log":[]}'
-	file.close()
 
-	var stored_json := JSON.parse(content)
-	if stored_json.error != OK:
-		push_warning("Could not parse JSON from fish logs file")
-		return
-	catch_journal = stored_json.result.catch_journal
-	fish_log = stored_json.result.fish_log
+	file.open("user://FishyTracker/fish_log_slot_%s.dat" % save_slot, File.READ)
+	if file.is_open():
+		var json := JSON.parse(file.get_as_text())
+
+		if json.error != OK:
+			push_warning("Could not parse JSON from fish logs file")
+			catch_journal = {}
+			fish_log = []
+
+		catch_journal = json.result.catch_journal
+		fish_log = json.result.fish_log
+	else:
+		push_warning("Could not open fish logs file for slot %s" % save_slot)
+		catch_journal = {}
+		fish_log = []
+	file.close()
 
 	_fish_log_refs = []
 	for entry in fish_log:
 		_fish_log_refs.append(entry.ref)
 
-	_last_inventory_size = PlayerData.inventory.size()
+	_last_inventory_size = 0
 
 
 func _switch_save_slot() -> void:
